@@ -1,0 +1,6 @@
+Requirement already satisfied: torchvision in /home/l/anaconda3/envs/pytorch-gpu/lib/python3.6/site-packages (0.8.2)
+Requirement already satisfied: numpy in /home/l/anaconda3/envs/pytorch-gpu/lib/python3.6/site-packages (from torchvision) (1.19.2)
+Requirement already satisfied: torch in /home/l/anaconda3/envs/pytorch-gpu/lib/python3.6/site-packages (from torchvision) (1.7.1)
+Requirement already satisfied: pillow>=4.1.1 in /home/l/anaconda3/envs/pytorch-gpu/lib/python3.6/site-packages (from torchvision) (8.1.1)
+Requirement already satisfied: typing_extensions in /home/l/anaconda3/envs/pytorch-gpu/lib/python3.6/site-packages (from torch->torchvision) (3.7.4.3)
+Requirement already satisfied: dataclasses in /home/l/anaconda3/envs/pytorch-gpu/lib/python3.6/site-packages (from torch->torchvision) (0.8)
