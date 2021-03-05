@@ -86,15 +86,17 @@ for classes in os.listdir(path):
 
 		humans = paf_to_pose_cpp(heatmap, paf, cfg)
 
-
 		out = draw_humans(oriImg, humans)
 		outBlank = draw_humans(blank, humans)
-		dataset.append((classes, out))
-		labels.append(classes)
+		
+		dataset = {'image': out, 'class': classes}
+
 		'''
 		cv2.imwrite('OutBlank.png',outBlank)
 		cv2.imwrite('result.png',out)
 		'''
 
-print(dataset[4])
-print(labels)
+
+print(dataset['image'], dataset['class'])
+cv2.imshow(dataset['class'], dataset['image'])
+cv2.waitKey(0)
