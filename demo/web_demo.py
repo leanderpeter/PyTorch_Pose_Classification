@@ -42,7 +42,7 @@ update_config(cfg, args)
 
 model = get_model('vgg19')     
 model.load_state_dict(torch.load(args.weight))
-model.cuda()
+# model.cuda()
 model.float()
 model.eval()
 

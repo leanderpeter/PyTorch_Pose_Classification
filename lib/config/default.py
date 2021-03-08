@@ -138,7 +138,7 @@ _C.DEBUG.SAVE_HEATMAPS_PRED = False
 
 def update_config(cfg, args):
     
-    args.cfg = '/home/l/pytorch_Realtime_Multi-Person_Pose_Estimation/experiments/vgg19_368x368_sgd.yaml'
+    args.cfg = '../experiments/vgg19_368x368_sgd.yaml'
     print(args.cfg, "Adress")
 
     cfg.defrost()

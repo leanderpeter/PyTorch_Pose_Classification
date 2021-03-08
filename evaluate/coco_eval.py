@@ -105,7 +105,10 @@ def get_outputs(img, model, preprocess):
     batch_images= np.expand_dims(im_data, 0)
 
     # several scales as a batch
+
+    #Switch between CUDA or CPU
     batch_var = torch.from_numpy(batch_images).cuda().float()
+    # batch_var = torch.from_numpy(batch_images).float()
     predicted_outputs, _ = model(batch_var)
     output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
     heatmap = output2.cpu().data.numpy().transpose(0, 2, 3, 1)[0]

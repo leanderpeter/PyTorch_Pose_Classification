@@ -1,2 +1,3 @@
 pose/pose_model.pth
 *.pth
+lib/pafprocess/build
