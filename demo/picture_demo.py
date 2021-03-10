@@ -41,18 +41,24 @@ args = parser.parse_args()
 # update config file
 update_config(cfg, args)
 
-
-
 model = get_model('vgg19')     
 model.load_state_dict(torch.load(args.weight))
 model = torch.nn.DataParallel(model).cuda()
 model.float()
 model.eval()
 
-test_image = '../readme/ski.jpg'
-# test_image = 'stop.jpeg'
+#test_image = '../readme/ski.jpg'
+test_image = 'IMG_1764.jpg'
 oriImg = cv2.imread(test_image) # B,G,R order
 shape_dst = np.min(oriImg.shape[0:2])
+
+# Processing at this point is shit cause of image distortion!
+width = 224
+height = 224
+dim = (width, height)
+
+# resize image
+oriImg = cv2.resize(oriImg, dim, interpolation = cv2.INTER_AREA)
 
 # Get results of original image
 

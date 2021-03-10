@@ -22,6 +22,7 @@ from scipy.ndimage.morphology import generate_binary_structure
 from scipy.ndimage.filters import gaussian_filter, maximum_filter
 from torchvision import transforms, models
 from PIL import Image
+from sklearn import preprocessing
 
 from lib.network.rtpose_vgg import get_model
 from lib.network import im_transform
@@ -29,6 +30,11 @@ from evaluate.coco_eval import get_outputs, handle_paf_and_heat
 from lib.utils.common import Human, BodyPart, CocoPart, CocoColors, CocoPairsRender, draw_humans
 from lib.utils.paf_to_pose import paf_to_pose_cpp
 from lib.config import cfg, update_config
+import processing
+
+# clear memory
+torch.cuda.empty_cache()
+
 
 
 parser = argparse.ArgumentParser()
@@ -50,6 +56,9 @@ path = './dataset/'
 
 #Dataset array
 dataset = np.array([])
+
+#Dataset labels
+lbl_classes = []
 
 ### Pose Estimation Model ### 
 model = get_model('vgg19')     
@@ -84,58 +93,65 @@ classifier = nn.Sequential(OrderedDict([('fc1', nn.Linear(input_size, hidden_uni
 
 print(pose_model)
 
+
+
 for classes in os.listdir(path):
-	for img in os.listdir(path + classes):
+    lbl_classes.append(classes)
 
-		img_path = str(path + classes + '/' + img)
+    for img in os.listdir(path + classes):
 
-		oriImg = cv2.imread(img_path) # B,G,R order
+        img_path = str(path + classes + '/' + img)
 
-		# Processing at this point is shit cause of image distortion!
-		width = 224
-		height = 224
-		dim = (width, height)
+        oriImg = cv2.imread(img_path) # B,G,R order
 
-		# resize image
-		oriImg = cv2.resize(oriImg, dim, interpolation = cv2.INTER_AREA)
+        # Processing at this point is shit cause of image distortion!
+        width = 224
+        height = 224
+        dim = (width, height)
 
-		shape_dst = np.min(oriImg.shape[0:2])
+        # resize image
+        oriImg = cv2.resize(oriImg, dim, interpolation = cv2.INTER_AREA)
 
-		# Get results of original image
+        shape_dst = np.min(oriImg.shape[0:2])
 
-		with torch.no_grad():
-		    paf, heatmap, im_scale = get_outputs(oriImg, model,  'rtpose')
-		          
-		print(im_scale)
+        # Get results of original image
 
-		blank = np.zeros(oriImg.shape, dtype=np.uint8)
-		# blank.fill(255)
+        with torch.no_grad():
+            paf, heatmap, im_scale = get_outputs(oriImg, model,  'rtpose')
+                  
+        print(im_scale)
 
-		humans = paf_to_pose_cpp(heatmap, paf, cfg)
+        blank = np.zeros(oriImg.shape, dtype=np.uint8)
+        # blank.fill(255)
 
-		out = draw_humans(oriImg, humans)
-		outBlank = draw_humans(blank, humans)
-		
-		img_set = {'image': outBlank, 'class': classes}
-		#dataset.append(img_set)
-		dataset = np.append(dataset, img_set)
+        humans = paf_to_pose_cpp(heatmap, paf, cfg)
+
+        out = draw_humans(oriImg, humans)
+        outBlank = draw_humans(blank, humans)
+        # convert from H x W x C to C x H x W 
+        outBlank = outBlank.transpose((2, 0, 1))
+
+        outBlank = torch.from_numpy(outBlank)
+
+
+
+        img_set = {'image': outBlank, 'class': lbl_classes.index(classes)}
+        #dataset.append(img_set)
+        dataset = np.append(dataset, img_set)
+
 
 
 
 # Training/Testing split. Biggest shit ever
 np.random.shuffle(dataset)
 dataset = np.array(dataset)
-training, test, validation = dataset[:6], dataset[6:7], dataset[7:8]
+training, test, validation = dataset[:80], dataset[80:94], dataset[80:94]
 print('Dataset lenght: ',len(dataset))
 print('training lenght: ',len(training))
 print('test lenght: ',len(test))
 print('Validation lenght: ',len(validation))
 
-for els in iter(training):
-	# print(els)
-	images, labels = els['image'], els['class']
-	print(type(labels))
-	print(type(images))
+# training, validation, test = 
 
 pose_model.classifier = classifier
 
@@ -143,24 +159,18 @@ pose_model.classifier = classifier
 criterion = nn.NLLLoss()
 
 #Gradient Decent settings
-gpu = 'cpu'
+gpu = 'cuda'
 learning_rate = 0.001
 epochs = 20
 save_dir = 'checkpoint.pth'
 arch = 'vgg'
 
-train_loader = torch.utils.data.DataLoader(training, batch_size=64, shuffle=True)
+train_loader = torch.utils.data.DataLoader(training, batch_size=4, shuffle=True)
 validate_loader = torch.utils.data.DataLoader(validation, batch_size=32)
 test_loader = torch.utils.data.DataLoader(test, batch_size=32)
 
-for els in iter(train_loader):
-	# print(els)
-	images, labels = els['image'], els['class']
-	print(type(labels))
-	print(type(images))
+torch.cuda.empty_cache()
 
-
-'''
 # Gradient descent optimizer
 optimizer = optim.Adam(pose_model.classifier.parameters(), lr=learning_rate)
     
@@ -168,8 +178,8 @@ model_functions.train_classifier(pose_model, optimizer, criterion, epochs, train
     
 model_functions.test_accuracy(pose_model, test_loader, gpu)
 
-model_functions.save_checkpoint(pose_model, training_dataset, arch, epochs, learning_rate, hidden_units, input_size)
-	
-'''
+model_functions.save_checkpoint(pose_model, training, arch, epochs, learning_rate, hidden_units, input_size)
+    
+
 
 #End
