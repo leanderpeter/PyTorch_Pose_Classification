@@ -1,22 +1,6 @@
 
 import sys
-
-'''
-import os.path as path
-
-two_up =  path.abspath(path.join(__file__ ,"../../.."))
-
-print(two_up)
-'''
-
-sys.path.append('../')
-
-
-for i in sys.path:
-    print(i)
-
-
-from lib.network.rtpose_vgg import get_model
+from rtpose_vgg import get_model
 
 class posemodelloader:
 
