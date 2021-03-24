@@ -5,4 +5,6 @@ pose/backup_checkpoint
 pose/dataset
 pose/checkpoint.pth
 *.pyc
+preprocessing.py
+test.py
 
