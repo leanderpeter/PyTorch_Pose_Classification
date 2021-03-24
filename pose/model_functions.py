@@ -1,7 +1,13 @@
+import os
+import re
+import sys
+sys.path.append('../')
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
+import argparse
 
 import torch
 from torch import nn
@@ -9,11 +15,17 @@ from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms, models
 from sklearn import preprocessing
+from torchvision import datasets, transforms, models
 
 from collections import OrderedDict
 
 import processing
+import cv2
 
+from evaluate.coco_eval import get_outputs, handle_paf_and_heat
+from lib.utils.common import Human, BodyPart, CocoPart, CocoColors, CocoPairsRender, draw_humans
+from lib.utils.paf_to_pose import paf_to_pose_cpp
+from lib.config import cfg, update_config
 
 # Train the classifier
 def train_classifier(model, optimizer, criterion, arg_epochs, train_loader, validate_loader, gpu):
@@ -184,14 +196,61 @@ def load_checkpoint(filepath):
     
     return model
 
-def predict(image_path, model, topk=1, gpu='cuda'):
+def predict(image_path, model, est_model, topk=1, gpu='cuda'):
+    ''' Estimate the pose of the person on screen
+    '''
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cfg', help='experiment configure file name',
+                        default='/home/l/pytorch_Realtime_Multi-Person_Pose_Estimation/experiments/vgg19_368x368_sgd.yaml', type=str)
+    parser.add_argument('--weight', type=str,
+                        default='pose_model.pth')
+    parser.add_argument('opts',
+                        help="Modify config options using the command-line",
+                        default=None,
+                        nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+
+    # update config file
+    update_config(cfg, args)
+
+    oriImg = cv2.imread(image_path) # B,G,R order
+    oriImgFS = oriImg
+    shape_dst = np.min(oriImg.shape[0:2])
+
+    # Processing at this point is shit cause of image distortion!
+    width = 224
+    height = 224
+    dim = (width, height)
+
+    # resize image
+    oriImg = cv2.resize(oriImg, dim, interpolation = cv2.INTER_AREA)
+
+    # Get results of original image
+
+    with torch.no_grad():
+        paf, heatmap, im_scale = get_outputs(oriImg, est_model,  'rtpose')
+
+    blank = np.zeros(oriImg.shape, dtype=np.uint8)
+
+    humans = paf_to_pose_cpp(heatmap, paf, cfg)
+
+
+    out = draw_humans(oriImg, humans)
+    outBlank = draw_humans(blank, humans)
+    outFS = draw_humans(oriImgFS, humans)
+
+
     ''' Predict the class (or classes) of an image using a trained deep learning model.
     '''
-    
     model.to(gpu)
     
-    image = processing.process_image(image_path)
-    
+    # image = processing.process_image(image_path)
+    # image = processing.process_image(outBlank.transforms.ToPILImage())
+
+    # transpose image to right order
+    image = outBlank.transpose((2, 0, 1))
+
     # Convert image to PyTorch tensor first
     image = torch.from_numpy(image).type(torch.cuda.FloatTensor)
     
@@ -218,5 +277,5 @@ def predict(image_path, model, topk=1, gpu='cuda'):
     
     top_classes = [idx_to_class[index] for index in top_indices]
     
-    return top_probabilities, top_classes, top_indices
+    return top_probabilities, top_classes, top_indices, out, outFS
 
