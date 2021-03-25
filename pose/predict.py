@@ -20,7 +20,7 @@ import cv2
 
 from lib.network.rtpose_vgg import get_model
 
-image_dir = './test_3SZ.jpg'
+image_dir = './test_5.jpg'
 checkpoint = 'checkpoint.pth'
 topk = 2
 # class_to_name_dict = {0:'Stop',1:'Left',2:'Right'}
